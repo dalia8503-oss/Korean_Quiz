@@ -437,7 +437,7 @@ let questionCount = 5;
 let levelFilter = 'all';
 let sessionAttemptId = null;
 let selectedQuizFile = 'quiz1.json';
-
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxHXTJ2Np_VwVvZmowmGisu6kSvkymkXBoK6wVih-hn2rarC1oDQsNYQQpeoLbBDSMG/exec";
 // ────────────────────────────────
 // 초기화
 // ────────────────────────────────
@@ -813,12 +813,14 @@ function saveAttempt(data) {
   const all = getAllAttempts();
   all.push(data);
   localStorage.setItem('kq_attempts', JSON.stringify(all));
-  // 서버에도 저장 (server.py 실행 중일 때만 동작, 없으면 조용히 무시)
-  fetch('/api/save-record', {
+
+  // 구글 스프레드시트로 전송
+  fetch(GOOGLE_SCRIPT_URL, {
     method: 'POST',
+    mode: 'no-cors', 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
-  }).catch(() => {});
+  }).catch((e) => console.error("구글 시트 저장 실패:", e));
 }
 
 function getMyWrongIds() {
@@ -831,8 +833,21 @@ function getMyWrongIds() {
 // ────────────────────────────────
 // 학습 이력 화면
 // ────────────────────────────────
-function renderHistory() {
+async function renderHistory() { // 앞에 async 추가
   const name = document.getElementById('inputName').value.trim() || localStorage.getItem('kq_last_name') || '';
+  const eid  = document.getElementById('inputEmpId').value.trim() || localStorage.getItem('kq_last_empid') || '';
+  
+  let all = getAllAttempts(); // 기본값은 내 기기 기록
+
+  // 구글 시트에서 전체 기록 가져오기 시도
+  try {
+    const res = await fetch(GOOGLE_SCRIPT_URL);
+    if (res.ok) {
+      all = await res.json();
+    }
+  } catch (e) {
+    console.log("구글 시트 데이터를 가져올 수 없어 로컬 기록만 표시합니다.");
+  }
   const eid  = document.getElementById('inputEmpId').value.trim() || localStorage.getItem('kq_last_empid') || '';
   const all = getAllAttempts();
 

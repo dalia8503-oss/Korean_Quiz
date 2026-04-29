@@ -535,11 +535,20 @@ function addNewQuestion() {
 }
 
 // ─── 학생 기록 ───
+// 복사한 구글 웹 앱 URL을 여기에 넣으세요
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxHXTJ2Np_VwVvZmowmGisu6kSvkymkXBoK6wVih-hn2rarC1oDQsNYQQpeoLbBDSMG/exec";
+
 async function fetchAllRecords() {
   try {
-    const res = await fetch('/api/records');
-    if (res.ok) return await res.json();
-  } catch {}
+    // 이제 로컬이 아닌 구글 스프레드시트(웹 앱)에서 데이터를 가져옵니다.
+    const res = await fetch(GOOGLE_SCRIPT_URL);
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (e) {
+    console.error("데이터 로드 실패:", e);
+  }
+  // 서버 연결 실패 시 내 기기(브라우저) 기록이라도 보여줍니다.
   return JSON.parse(localStorage.getItem('kq_attempts') || '[]');
 }
 
