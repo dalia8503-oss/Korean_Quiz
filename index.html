@@ -833,13 +833,13 @@ function getMyWrongIds() {
 // ────────────────────────────────
 // 학습 이력 화면
 // ────────────────────────────────
-async function renderHistory() { // 앞에 async 추가
+async function renderHistory() { 
   const name = document.getElementById('inputName').value.trim() || localStorage.getItem('kq_last_name') || '';
   const eid  = document.getElementById('inputEmpId').value.trim() || localStorage.getItem('kq_last_empid') || '';
   
   let all = getAllAttempts(); // 기본값은 내 기기 기록
 
-  // 구글 시트에서 전체 기록 가져오기 시도
+  // 1. 구글 시트에서 전체 기록 가져오기 시도
   try {
     const res = await fetch(GOOGLE_SCRIPT_URL);
     if (res.ok) {
@@ -848,10 +848,8 @@ async function renderHistory() { // 앞에 async 추가
   } catch (e) {
     console.log("구글 시트 데이터를 가져올 수 없어 로컬 기록만 표시합니다.");
   }
-  const eid  = document.getElementById('inputEmpId').value.trim() || localStorage.getItem('kq_last_empid') || '';
-  const all = getAllAttempts();
 
-  // 내 기록 탭
+  // 2. 내 기록 탭 렌더링
   const myInfo = document.getElementById('myNameInfo');
   const myList = document.getElementById('myHistoryList');
   const myAttempts = all.filter(a => a.studentName === name && a.empId === eid).reverse();
@@ -870,7 +868,7 @@ async function renderHistory() { // 앞에 async 추가
     myList.innerHTML = myAttempts.map(a => renderHistoryCard(a)).join('');
   }
 
-  // 전체 기록 탭
+  // 3. 전체 기록 탭 렌더링
   const allList = document.getElementById('allHistoryList');
   if (all.length === 0) {
     allList.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div>기록이 없습니다.</div>`;
@@ -889,7 +887,7 @@ async function renderHistory() { // 앞에 async 추가
       </div>
     `).join('');
   }
-}
+} // 함수의 끝 중괄호 확인
 
 function renderHistoryCard(a, compact = false) {
   const grade = a.accuracy >= 90 ? 'S' : a.accuracy >= 80 ? 'A' : a.accuracy >= 70 ? 'B' : a.accuracy >= 60 ? 'C' : 'D';
