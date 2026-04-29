@@ -815,13 +815,15 @@ function saveAttempt(data) {
   all.push(data);
   localStorage.setItem('kq_attempts', JSON.stringify(all));
 
-// 구글 스프레드시트로 전송
+  // 🚨 최종 우회 전송 방식 (보안 차단 원천 봉쇄)
   fetch(GOOGLE_SCRIPT_URL, {
     method: 'POST',
-    mode: 'no-cors', 
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(data)
-  }).catch((e) => console.error("구글 시트 저장 실패:", e));
+    mode: 'no-cors',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: new URLSearchParams({ data: JSON.stringify(data) })
+  }).then(() => console.log('전송 시도 완료')).catch(e => console.error(e));
 }
 
 function getMyWrongIds() {
