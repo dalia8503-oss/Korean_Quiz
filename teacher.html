@@ -535,18 +535,41 @@ function addNewQuestion() {
 }
 
 // ─── 학생 기록 ───
-function renderRecords() {
-  const all = JSON.parse(localStorage.getItem('kq_attempts') || '[]');
+async function fetchAllRecords() {
+  try {
+    const res = await fetch('/api/records');
+    if (res.ok) return await res.json();
+  } catch {}
+  return JSON.parse(localStorage.getItem('kq_attempts') || '[]');
+}
+
+const LEVEL_BADGE = { '기초':'#eff6ff|#1d4ed8', '초급1':'#f0fdf4|#15803d', '초급2':'#fef9c3|#a16207', '중급1':'#fff7ed|#c2410c', '중급2':'#fdf4ff|#86198f' };
+function levelBadge(lvl) {
+  const [bg, color] = (LEVEL_BADGE[lvl] || '#f1f5f9|#64748b').split('|');
+  return `<span style="background:${bg};color:${color};padding:2px 8px;border-radius:99px;font-size:0.75rem;font-weight:700;">${lvl||'-'}</span>`;
+}
+
+async function renderRecords() {
+  const all = await fetchAllRecords();
   const statsEl = document.getElementById('recordStats');
   const tableEl = document.getElementById('recordTable');
 
-  const students = [...new Set(all.map(a => a.studentName))];
+  const students = [...new Set(all.map(a => `${a.studentName}__${a.empId||''}`))];
   const avgScore = all.length > 0 ? Math.round(all.reduce((s,a) => s+a.score, 0)/all.length) : 0;
+
+  // 레벨별 시도 횟수
+  const byLevel = {};
+  all.forEach(a => { const lv = a.quizLevel||'-'; byLevel[lv] = (byLevel[lv]||0)+1; });
+  const levelSummary = Object.entries(byLevel).map(([lv,cnt]) => `${lv} ${cnt}회`).join(' · ');
 
   statsEl.innerHTML = `
     <div class="stat-box"><div class="val">${all.length}</div><div class="lbl">총 시도 횟수</div></div>
     <div class="stat-box"><div class="val">${students.length}</div><div class="lbl">학생 수</div></div>
     <div class="stat-box"><div class="val">${avgScore}</div><div class="lbl">평균 점수</div></div>
+    <div class="stat-box" style="grid-column:1/-1;text-align:left;padding:12px 14px;">
+      <div class="lbl" style="margin-bottom:4px;">레벨별 응시</div>
+      <div style="font-size:0.9rem;font-weight:600;">${levelSummary||'-'}</div>
+    </div>
   `;
 
   if (all.length === 0) {
@@ -556,28 +579,30 @@ function renderRecords() {
 
   const rows = [...all].reverse().map(a => `
     <tr>
-      <td data-label="학생">${a.studentName}</td>
-      <td data-label="날짜">${a.date}</td>
+      <td data-label="이름">${a.studentName}</td>
+      <td data-label="사번" style="font-family:monospace;">${a.empId||'-'}</td>
+      <td data-label="레벨">${levelBadge(a.quizLevel)}</td>
+      <td data-label="날짜" style="font-size:0.82rem;">${a.date}</td>
       <td data-label="모드">${{all:'전체',unit:'단원별',wrong:'오답'}[a.quizMode]||a.quizMode}</td>
       <td data-label="점수"><strong>${a.score}점</strong></td>
       <td data-label="정답률">${a.accuracy}%</td>
-      <td data-label="문제">${a.correctCount}/${a.totalQuestions}</td>
+      <td data-label="정답">${a.correctCount}/${a.totalQuestions}</td>
     </tr>
   `).join('');
 
   tableEl.innerHTML = `
     <table>
-      <thead><tr><th>학생</th><th>날짜</th><th>모드</th><th>점수</th><th>정답률</th><th>정답</th></tr></thead>
+      <thead><tr><th>이름</th><th>사번</th><th>레벨</th><th>날짜</th><th>모드</th><th>점수</th><th>정답률</th><th>정답</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
   `;
 }
 
-function exportCSV() {
-  const all = JSON.parse(localStorage.getItem('kq_attempts') || '[]');
+async function exportCSV() {
+  const all = await fetchAllRecords();
   if (all.length === 0) { alert('내보낼 데이터가 없습니다.'); return; }
-  const headers = ['학생이름', '날짜', '퀴즈모드', '점수', '정답률', '전체문제', '정답수', '틀린문제수'];
-  const rows = all.map(a => [a.studentName, a.date, a.quizMode, a.score, a.accuracy+'%', a.totalQuestions, a.correctCount, a.wrongQuestions.length]);
+  const headers = ['학생이름', '사번', '레벨', '날짜', '퀴즈모드', '점수', '정답률', '전체문제', '정답수', '틀린문제수'];
+  const rows = all.map(a => [a.studentName, a.empId||'', a.quizLevel||'', a.date, a.quizMode, a.score, a.accuracy+'%', a.totalQuestions, a.correctCount, a.wrongQuestions.length]);
   const csv = '﻿' + [headers,...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
@@ -586,8 +611,9 @@ function exportCSV() {
   URL.revokeObjectURL(url);
 }
 
-function clearAll() {
+async function clearAll() {
   if (!confirm('모든 학생 기록이 삭제됩니다. 계속하시겠어요?')) return;
+  try { await fetch('/api/records', { method: 'DELETE' }); } catch {}
   localStorage.removeItem('kq_attempts');
   renderRecords();
   alert('초기화 완료!');

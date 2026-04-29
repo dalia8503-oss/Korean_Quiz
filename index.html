@@ -701,9 +701,11 @@ function finishQuiz() {
   const wrongIds = answers.filter(a => !a.correct).map(a => a.id);
 
   // LocalStorage 저장
+  const LEVEL_NAMES_MAP = {'quiz1.json':'기초','quiz2.json':'초급1','quiz3.json':'초급2','quiz4.json':'중급1','quiz5.json':'중급2'};
   saveAttempt({
     studentName,
     empId,
+    quizLevel: LEVEL_NAMES_MAP[selectedQuizFile] || selectedQuizFile,
     attemptId: sessionAttemptId,
     date: new Date().toLocaleString('ko-KR'),
     quizMode,
@@ -811,6 +813,12 @@ function saveAttempt(data) {
   const all = getAllAttempts();
   all.push(data);
   localStorage.setItem('kq_attempts', JSON.stringify(all));
+  // 서버에도 저장 (server.py 실행 중일 때만 동작, 없으면 조용히 무시)
+  fetch('/api/save-record', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  }).catch(() => {});
 }
 
 function getMyWrongIds() {
