@@ -517,10 +517,14 @@ function restoreLastName() {
   const savedEmp = localStorage.getItem('kq_last_empid');
   if (savedEmp) document.getElementById('inputEmpId').value = savedEmp;
 
-  // 이름: 한글(가-힣) + 공백만 허용, 10자 제한
-  document.getElementById('inputName').addEventListener('input', function () {
+  // 이름: 한글만 허용, 10자 제한 — compositionend·blur 시점에 필터 (IME 조합 중 간섭 방지)
+  const nameEl = document.getElementById('inputName');
+  const filterName = function () {
     this.value = this.value.replace(/[^가-힣\s]/g, '').slice(0, 10);
-  });
+  };
+  nameEl.addEventListener('compositionend', filterName);
+  nameEl.addEventListener('blur', filterName);
+
   // 사번: 숫자만 허용, 6자 제한
   document.getElementById('inputEmpId').addEventListener('input', function () {
     this.value = this.value.replace(/\D/g, '').slice(0, 6);
