@@ -1,4 +1,4 @@
-const CACHE = 'kq-v5';
+const CACHE = 'kq-v6';
 const FILES = [
   './',
   './index.html',

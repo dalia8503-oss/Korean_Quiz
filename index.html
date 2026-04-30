@@ -437,7 +437,7 @@ let selectedUnits = [];
 let questionCount = 5;
 let levelFilter = 'all';
 let sessionAttemptId = null;
-let selectedQuizFile = 'quiz1.json';
+let selectedQuizFile = 'quiz0.json';
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw7_bBwy9qnGnC2U8_ZjOE6m_1c1DNCUczQ4Mq1ZEEwKUfwNPWjWLQCbZoBvoSVZLFx/exec";
 // ────────────────────────────────
 // 초기화
@@ -450,7 +450,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   restoreLastName();
 });
 
-async function loadQuestions(filename = 'quiz1.json') {
+async function loadQuestions(filename = 'quiz0.json') {
   try {
     const res = await fetch(filename);
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -581,7 +581,7 @@ function startQuiz() {
   answers = [];
   sessionAttemptId = Date.now().toString();
 
-  const levelNames = {'quiz1.json':'기초','quiz2.json':'초급1','quiz3.json':'초급2','quiz4.json':'중급1','quiz5.json':'중급2'};
+  const levelNames = {'quiz0.json':'기초','quiz1.json':'초급1','quiz2.json':'초급2','quiz3.json':'중급1','quiz4.json':'중급2'};
   const levelTag = `[${levelNames[selectedQuizFile]}] `;
   document.getElementById('quizTitle').textContent = levelTag + (
     quizMode === 'all' ? '전체 랜덤 퀴즈' :
@@ -702,7 +702,7 @@ function finishQuiz() {
   const wrongIds = answers.filter(a => !a.correct).map(a => a.id);
 
   // LocalStorage 저장
-  const LEVEL_NAMES_MAP = {'quiz1.json':'기초','quiz2.json':'초급1','quiz3.json':'초급2','quiz4.json':'중급1','quiz5.json':'중급2'};
+  const LEVEL_NAMES_MAP = {'quiz0.json':'기초','quiz1.json':'초급1','quiz2.json':'초급2','quiz3.json':'중급1','quiz4.json':'중급2'};
   saveAttempt({
     studentName,
     empId,
