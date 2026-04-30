@@ -1,4 +1,4 @@
-const CACHE = 'kq-v10';
+const CACHE = 'kq-v11';
 const FILES = [
   './',
   './student.html',

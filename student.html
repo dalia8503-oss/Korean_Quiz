@@ -1092,8 +1092,9 @@ async function generateAISimilarQuestions() {
   const generated = [];
   let lastError = '';
   for (const a of wrongAnswers) {
-    const q = quizQuestions.find(q => q.id === a.id);
-    if (!q) continue;
+    const q = quizQuestions.find(q => q.id === a.id)
+           || allQuestions.find(q => q.id === a.id);
+    if (!q) { lastError = `문제 ID ${a.id} 를 찾을 수 없음`; continue; }
     try {
       const newQ = await generateSimilarQuestion(q);
       if (newQ) generated.push(newQ);
