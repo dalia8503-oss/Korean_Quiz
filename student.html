@@ -1042,9 +1042,7 @@ function shuffle(arr) {
 const GEMINI_API_KEY = 'AIzaSyDzPtvSK16win_QDMcrnpoHfkRL7yDAtLU';
 
 async function generateSimilarQuestion(wrongQuestion) {
-  const { GoogleGenerativeAI } = await import('https://esm.run/@google/generative-ai');
-  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
   const prompt = `당신은 한국어 선생님입니다. 학생이 다음 문제를 틀렸습니다.
 내용: ${wrongQuestion.question}
@@ -1053,19 +1051,26 @@ async function generateSimilarQuestion(wrongQuestion) {
 단원: ${wrongQuestion.unit}
 
 위 문제와 유사한 유형의 새로운 한국어 학습 문제를 1개 만들어주세요.
-반드시 아래 JSON 형식으로만 응답하세요.
+반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트는 절대 포함하지 마세요.
 {
   "unit": "${wrongQuestion.unit}",
   "level": "${wrongQuestion.level}",
-  "type": "${wrongQuestion.type}",
+  "type": "${wrongQuestion.type || 'multiple_choice'}",
   "question": "문제 내용",
   "choices": ["보기1", "보기2", "보기3", "보기4"],
   "answer": "정답 내용",
   "explanation": "해설 내용"
 }`;
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text();
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+  });
+
+  if (!res.ok) throw new Error(`API 오류: ${res.status}`);
+  const data = await res.json();
+  const text = data.candidates[0].content.parts[0].text;
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('JSON 파싱 실패');
   return JSON.parse(jsonMatch[0]);
