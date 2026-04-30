@@ -12,6 +12,15 @@
   <meta name="description" content="한국어와 한국 문화를 학습하는 퀴즈 앱">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="quiz_image.png">
+  <!-- Gemini API를 사용하기 위한 SDK 추가 -->
+<script type="importmap">
+  {
+    "imports": {
+      "@google/generative-ai": "https://esm.run/@google/generative-ai"
+    }
+  }
+</script>
+  
   <style>
     :root {
       --primary: #2563eb;
@@ -176,6 +185,18 @@
     }
     .wrong-q { font-weight: 600; margin-bottom: 4px; }
     .wrong-ans { color: var(--muted); font-size: 0.82rem; }
+
+    /* ─── AI 유사문제 ─── */
+    .ai-question-item {
+      background: #f0f7ff; border-radius: 10px; padding: 14px 16px;
+      margin-bottom: 12px; font-size: 0.9rem; border-left: 4px solid var(--primary);
+    }
+    .ai-q-num { font-size: 0.75rem; color: var(--primary); font-weight: 700; margin-bottom: 6px; }
+    .ai-q-text { font-weight: 600; margin-bottom: 10px; line-height: 1.5; }
+    .ai-choices { margin: 0 0 10px 16px; padding: 0; }
+    .ai-choices li { padding: 4px 0; color: var(--muted); }
+    .ai-choices li.ai-correct { color: var(--success); font-weight: 700; }
+    .ai-explanation { font-size: 0.82rem; color: #6b5e00; background: #fffbeb; border-radius: 6px; padding: 8px 10px; }
 
     /* ─── 이력 화면 ─── */
     .history-card {
@@ -379,6 +400,12 @@
   <div class="card" id="wrongListCard" style="display:none;">
     <h3>❌ 틀린 문제 목록</h3>
     <div id="wrongList"></div>
+    <button class="btn btn-outline" id="aiGenerateBtn" onclick="generateAISimilarQuestions()" style="margin-top:12px;width:100%;">🤖 AI 유사문제 생성</button>
+  </div>
+
+  <div class="card" id="aiGeneratedCard" style="display:none;">
+    <h3>🤖 AI 생성 유사문제</h3>
+    <div id="aiGeneratedList"></div>
   </div>
 
   <div class="btn-row">
@@ -786,15 +813,40 @@ function restartSame() {
   renderQuestion();
 }
 
-function retryWrong() {
-  const wrongIds = answers.filter(a => !a.correct).map(a => a.id);
-  quizQuestions = allQuestions.filter(q => wrongIds.includes(q.id));
-  shuffle(quizQuestions);
+async function retryWrong() {
+  const wrongAnswers = answers.filter(a => !a.correct);
+  if (wrongAnswers.length === 0) return;
+
+  document.getElementById('loadingOverlay').style.display = 'flex';
+  document.querySelector('#loadingOverlay div:last-child').textContent = '유사 문제를 생성 중입니다...';
+
+  let newQuestions = [];
+  for (const ans of wrongAnswers) {
+    const originalQ = allQuestions.find(q => q.id === ans.id);
+    try {
+      const newQ = await generateSimilarQuestion(originalQ);
+      if (newQ) newQuestions.push(newQ);
+    } catch (e) {
+      console.error('생성 실패:', originalQ?.id, e);
+    }
+  }
+
+  document.getElementById('loadingOverlay').style.display = 'none';
+
+  if (newQuestions.length > 0) {
+    quizQuestions = newQuestions;
+  } else {
+    alert('유사 문제 생성에 실패했습니다. 기존 문제로 진행합니다.');
+    const wrongIds = wrongAnswers.map(a => a.id);
+    quizQuestions = allQuestions.filter(q => wrongIds.includes(q.id));
+    shuffle(quizQuestions);
+  }
+
   currentIdx = 0;
   answers = [];
   sessionAttemptId = Date.now().toString();
   quizMode = 'wrong';
-  document.getElementById('quizTitle').textContent = '오답 복습 퀴즈';
+  document.getElementById('quizTitle').textContent = newQuestions.length > 0 ? 'AI 생성 오답 복습' : '오답 복습 퀴즈';
   showScreen('screenQuiz');
   renderQuestion();
 }
@@ -974,6 +1026,85 @@ function shuffle(arr) {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+}
+
+// ────────────────────────────────
+// Gemini AI 유사문제 생성
+// ────────────────────────────────
+const GEMINI_API_KEY = 'AIzaSyDzPtvSK16win_QDMcrnpoHfkRL7yDAtLU';
+
+async function generateSimilarQuestion(wrongQuestion) {
+  const { GoogleGenerativeAI } = await import('https://esm.run/@google/generative-ai');
+  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+  const prompt = `당신은 한국어 선생님입니다. 학생이 다음 문제를 틀렸습니다.
+내용: ${wrongQuestion.question}
+정답: ${wrongQuestion.answer}
+난이도: ${wrongQuestion.level}
+단원: ${wrongQuestion.unit}
+
+위 문제와 유사한 유형의 새로운 한국어 학습 문제를 1개 만들어주세요.
+반드시 아래 JSON 형식으로만 응답하세요.
+{
+  "unit": "${wrongQuestion.unit}",
+  "level": "${wrongQuestion.level}",
+  "type": "${wrongQuestion.type}",
+  "question": "문제 내용",
+  "choices": ["보기1", "보기2", "보기3", "보기4"],
+  "answer": "정답 내용",
+  "explanation": "해설 내용"
+}`;
+
+  const result = await model.generateContent(prompt);
+  const text = result.response.text();
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('JSON 파싱 실패');
+  return JSON.parse(jsonMatch[0]);
+}
+
+async function generateAISimilarQuestions() {
+  const btn = document.getElementById('aiGenerateBtn');
+  const card = document.getElementById('aiGeneratedCard');
+  const list = document.getElementById('aiGeneratedList');
+
+  const wrongAnswers = answers.filter(a => !a.correct);
+  if (wrongAnswers.length === 0) return;
+
+  btn.disabled = true;
+  btn.textContent = '⏳ 생성 중...';
+  card.style.display = 'block';
+  list.innerHTML = '<p style="color:var(--muted);text-align:center;padding:16px 0;">AI가 유사문제를 생성하고 있습니다...</p>';
+
+  const generated = [];
+  for (const a of wrongAnswers) {
+    const q = quizQuestions.find(q => q.id === a.id);
+    if (!q) continue;
+    try {
+      const newQ = await generateSimilarQuestion(q);
+      if (newQ) generated.push(newQ);
+    } catch (e) {
+      console.error('생성 실패:', q.id, e);
+    }
+  }
+
+  if (generated.length === 0) {
+    list.innerHTML = '<p style="color:var(--danger);text-align:center;padding:16px 0;">유사문제 생성에 실패했습니다.</p>';
+  } else {
+    list.innerHTML = generated.map((q, i) => `
+      <div class="ai-question-item">
+        <div class="ai-q-num">문제 ${i + 1} · ${q.unit} · ${q.level}</div>
+        <div class="ai-q-text">${q.question}</div>
+        <ol class="ai-choices">
+          ${q.choices.map(c => `<li class="${c === q.answer ? 'ai-correct' : ''}">${c}</li>`).join('')}
+        </ol>
+        <div class="ai-explanation">💡 ${q.explanation}</div>
+      </div>
+    `).join('');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🔄 다시 생성';
 }
 
 // ────────────────────────────────
