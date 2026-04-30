@@ -1090,6 +1090,7 @@ async function generateAISimilarQuestions() {
   list.innerHTML = '<p style="color:var(--muted);text-align:center;padding:16px 0;">AI가 유사문제를 생성하고 있습니다...</p>';
 
   const generated = [];
+  let lastError = '';
   for (const a of wrongAnswers) {
     const q = quizQuestions.find(q => q.id === a.id);
     if (!q) continue;
@@ -1097,12 +1098,13 @@ async function generateAISimilarQuestions() {
       const newQ = await generateSimilarQuestion(q);
       if (newQ) generated.push(newQ);
     } catch (e) {
+      lastError = e.message || String(e);
       console.error('생성 실패:', q.id, e);
     }
   }
 
   if (generated.length === 0) {
-    list.innerHTML = '<p style="color:var(--danger);text-align:center;padding:16px 0;">유사문제 생성에 실패했습니다.</p>';
+    list.innerHTML = `<p style="color:var(--danger);text-align:center;padding:16px 0;">유사문제 생성에 실패했습니다.<br><span style="font-size:0.8rem;color:var(--muted);">${lastError}</span></p>`;
   } else {
     list.innerHTML = generated.map((q, i) => `
       <div class="ai-question-item">
