@@ -1042,7 +1042,7 @@ function shuffle(arr) {
 const GEMINI_API_KEY = 'AIzaSyDzPtvSK16win_QDMcrnpoHfkRL7yDAtLU';
 
 async function generateSimilarQuestion(wrongQuestion) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
   const prompt = `당신은 한국어 선생님입니다. 학생이 다음 문제를 틀렸습니다.
 내용: ${wrongQuestion.question}
