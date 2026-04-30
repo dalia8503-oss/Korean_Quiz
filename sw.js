@@ -1,15 +1,15 @@
-const CACHE = 'kq-v7';
+const CACHE = 'kq-v8';
 const FILES = [
   './',
-  './index.html',
+  './student.html',
   './teacher.html',
   './manifest.json',
   './quiz_image.png',
+  './quiz0.json',
   './quiz1.json',
   './quiz2.json',
   './quiz3.json',
-  './quiz4.json',
-  './quiz5.json'
+  './quiz4.json'
 ];
 
 // 설치: 핵심 파일 캐시
@@ -43,6 +43,6 @@ self.addEventListener('fetch', e => {
         }
         return res;
       });
-    }).catch(() => caches.match('./index.html'))
+    }).catch(() => caches.match('./student.html'))
   );
 });

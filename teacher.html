@@ -130,7 +130,7 @@
     <p style="font-size:0.8rem;opacity:0.8;">한국어·문화 퀴즈 관리 도구</p>
   </div>
   <div style="margin-left:auto;">
-    <a href="index.html" class="badge">← 학생 앱으로</a>
+    <a href="student.html" class="badge">← 학생 앱으로</a>
   </div>
 </header>
 
@@ -141,11 +141,11 @@
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       <span style="font-weight:700;font-size:0.9rem;">📘 레벨 선택:</span>
       <div style="display:flex;gap:6px;flex-wrap:wrap;" id="teacherLevelGroup">
-        <button class="btn btn-primary btn-sm" onclick="selectTeacherLevel(this,'quiz1')">기초</button>
-        <button class="btn btn-gray btn-sm" onclick="selectTeacherLevel(this,'quiz2')">초급1</button>
-        <button class="btn btn-gray btn-sm" onclick="selectTeacherLevel(this,'quiz3')">초급2</button>
-        <button class="btn btn-gray btn-sm" onclick="selectTeacherLevel(this,'quiz4')">중급1</button>
-        <button class="btn btn-gray btn-sm" onclick="selectTeacherLevel(this,'quiz5')">중급2</button>
+        <button class="btn btn-primary btn-sm" onclick="selectTeacherLevel(this,'quiz0')">기초</button>
+        <button class="btn btn-gray btn-sm" onclick="selectTeacherLevel(this,'quiz1')">초급1</button>
+        <button class="btn btn-gray btn-sm" onclick="selectTeacherLevel(this,'quiz2')">초급2</button>
+        <button class="btn btn-gray btn-sm" onclick="selectTeacherLevel(this,'quiz3')">중급1</button>
+        <button class="btn btn-gray btn-sm" onclick="selectTeacherLevel(this,'quiz4')">중급2</button>
       </div>
     </div>
   </div>
@@ -288,8 +288,11 @@ let loadedQuestions = [];
 let filteredQuestions = [];
 let currentPage = 1;
 const PAGE_SIZE = 10;
-let selectedTeacherFile = 'quiz1';
-const LEVEL_NAMES = { quiz1:'기초', quiz2:'초급1', quiz3:'초급2', quiz4:'중급1', quiz5:'중급2' };
+let selectedTeacherFile = 'quiz0';
+const LEVEL_NAMES = { quiz0:'기초', quiz1:'초급1', quiz2:'초급2', quiz3:'중급1', quiz4:'중급2' };
+// 구버전 파일명 → 한글 레벨명 변환 (이전 기록 호환)
+const LEGACY_LEVEL_MAP = { 'quiz1.json':'기초','quiz2.json':'초급1','quiz3.json':'초급2','quiz4.json':'중급1','quiz5.json':'중급2', 'quiz1':'기초','quiz2':'초급1','quiz3':'초급2','quiz4':'중급1','quiz5':'중급2' };
+function normalizeLevel(lv) { return LEGACY_LEVEL_MAP[lv] || lv; }
 function getOverrideKey() { return 'kq_questions_override_' + selectedTeacherFile; }
 function selectTeacherLevel(btn, level) {
   document.querySelectorAll('#teacherLevelGroup .btn').forEach(b => {
@@ -554,8 +557,9 @@ async function fetchAllRecords() {
 
 const LEVEL_BADGE = { '기초':'#eff6ff|#1d4ed8', '초급1':'#f0fdf4|#15803d', '초급2':'#fef9c3|#a16207', '중급1':'#fff7ed|#c2410c', '중급2':'#fdf4ff|#86198f' };
 function levelBadge(lvl) {
-  const [bg, color] = (LEVEL_BADGE[lvl] || '#f1f5f9|#64748b').split('|');
-  return `<span style="background:${bg};color:${color};padding:2px 8px;border-radius:99px;font-size:0.75rem;font-weight:700;">${lvl||'-'}</span>`;
+  const normalized = normalizeLevel(lvl);
+  const [bg, color] = (LEVEL_BADGE[normalized] || '#f1f5f9|#64748b').split('|');
+  return `<span style="background:${bg};color:${color};padding:2px 8px;border-radius:99px;font-size:0.75rem;font-weight:700;">${normalized||'-'}</span>`;
 }
 
 async function renderRecords() {
@@ -568,7 +572,7 @@ async function renderRecords() {
 
   // 레벨별 시도 횟수
   const byLevel = {};
-  all.forEach(a => { const lv = a.quizLevel||'-'; byLevel[lv] = (byLevel[lv]||0)+1; });
+  all.forEach(a => { const lv = normalizeLevel(a.quizLevel||'-'); byLevel[lv] = (byLevel[lv]||0)+1; });
   const levelSummary = Object.entries(byLevel).map(([lv,cnt]) => `${lv} ${cnt}회`).join(' · ');
 
   statsEl.innerHTML = `

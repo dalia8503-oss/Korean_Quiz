@@ -2,7 +2,7 @@
   "name": "한국어·문화 학습 퀴즈",
   "short_name": "한국어퀴즈",
   "description": "한국어와 한국 문화를 학습하는 퀴즈 앱",
-  "start_url": "./index.html",
+  "start_url": "./student.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
